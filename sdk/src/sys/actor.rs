@@ -31,4 +31,7 @@ super::fvm_syscalls! {
      /// length of the written CID written to the output buffer. Can only
      /// return a failure due to internal errors.
     pub fn get_code_cid_for_type(typ: i32, obuf_off: *mut u8, obuf_len: u32) -> Result<i32>;
+
+    /// Installs/Ensures actor code is valid and loaded.
+    pub fn install_actor(cid_off: *const u8) -> Result<()>;
 }

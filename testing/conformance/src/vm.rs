@@ -349,7 +349,7 @@ where
         self.0.create_actor(code_id, actor_id)
     }
 
-    fn install_actor(&self, code_id: Cid) -> Result<()> {
+    fn install_actor(&mut self, code_id: Cid) -> Result<()> {
         Ok(())
     }
 

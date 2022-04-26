@@ -10,7 +10,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use thiserror::Error;
 
-use crate::address::Error as AddressError;
+use crate::address::{Error as AddressError, Protocol};
 
 /// BLS signature length in bytes.
 pub const BLS_SIG_LEN: usize = 96;
@@ -33,10 +33,30 @@ pub enum SignatureType {
 }
 
 /// A cryptographic signature, represented in bytes, of any key protocol.
+// TODO:
+// 1. Move this type into the builtin-actors repo.
+// 2. Move signature verification into the FVM itself.
+// 3. Delete the entire "crypto" module.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Signature {
     pub sig_type: SignatureType,
     pub bytes: Vec<u8>,
+}
+
+#[derive(thiserror::Error, Clone, Debug)]
+#[error("address is not a public key: {0}")]
+pub struct NonKeyAddressError(pub Protocol);
+
+impl TryFrom<Protocol> for SignatureType {
+    type Error = NonKeyAddressError;
+
+    fn try_from(protocol: Protocol) -> Result<Self, Self::Error> {
+        match protocol {
+            Protocol::Secp256k1 => Ok(SignatureType::Secp256k1),
+            Protocol::BLS => Ok(SignatureType::BLS),
+            other => Err(NonKeyAddressError(other)),
+        }
+    }
 }
 
 impl Cbor for Signature {}
@@ -108,13 +128,20 @@ impl Signature {
 impl Signature {
     /// Checks if a signature is valid given data and address.
     pub fn verify(&self, data: &[u8], addr: &crate::address::Address) -> Result<(), String> {
-        use crate::address::Protocol;
+        verify_signature(data, &self.bytes, addr)
+    }
+}
 
-        match addr.protocol() {
-            Protocol::BLS => self::ops::verify_bls_sig(self.bytes(), data, addr),
-            Protocol::Secp256k1 => self::ops::verify_secp256k1_sig(self.bytes(), data, addr),
-            _ => Err("Address must be resolved to verify a signature".to_owned()),
-        }
+/// Checks if a signature is valid given data and address.
+#[cfg(feature = "crypto")]
+pub fn verify_signature(
+    data: &[u8],
+    signature: &[u8],
+    addr: &crate::address::Address,
+) -> Result<(), String> {
+    match SignatureType::try_from(addr.protocol()).map_err(|e| e.to_string())? {
+        SignatureType::BLS => self::ops::verify_bls_sig(signature, data, addr),
+        SignatureType::Secp256k1 => self::ops::verify_secp256k1_sig(signature, data, addr),
     }
 }
 

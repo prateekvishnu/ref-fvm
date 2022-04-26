@@ -9,7 +9,7 @@ use cid::Cid;
 use fvm_ipld_encoding::{Cbor, DAG_CBOR};
 use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
-use fvm_shared::crypto::signature::Signature;
+use fvm_shared::crypto::signature::{Signature, SignatureType};
 use fvm_shared::error::ErrorNumber::IllegalArgument;
 use fvm_shared::piece::PieceInfo;
 use fvm_shared::sector::{
@@ -29,21 +29,20 @@ use crate::{syscall_error, Kernel};
 ///  - -1: verification failed.
 pub fn verify_signature(
     mut context: Context<'_, impl Kernel>,
-    sig_off: u32, // Signature
+    sig_off: u32,
     sig_len: u32,
-    addr_off: u32, // Address
+    addr_off: u32,
     addr_len: u32,
     plaintext_off: u32,
     plaintext_len: u32,
 ) -> Result<i32> {
-    let sig: Signature = context.memory.read_cbor(sig_off, sig_len)?;
-    let addr: Address = context.memory.read_address(addr_off, addr_len)?;
-    // plaintext doesn't need to be a mutable borrow, but otherwise we would be
-    // borrowing the ctx both immutably and mutably.
+    let sig = context.memory.try_slice(sig_off, sig_len)?;
+    let addr = context.memory.read_address(addr_off, addr_len)?;
     let plaintext = context.memory.try_slice(plaintext_off, plaintext_len)?;
+
     context
         .kernel
-        .verify_signature(&sig, &addr, plaintext)
+        .verify_signature(sig, &addr, plaintext)
         .map(|v| if v { 0 } else { -1 })
 }
 

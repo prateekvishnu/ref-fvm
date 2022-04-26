@@ -17,7 +17,6 @@ use fvm_shared::bigint::BigInt;
 use fvm_shared::clock::ChainEpoch;
 use fvm_shared::consensus::ConsensusFault;
 use fvm_shared::crypto::randomness::DomainSeparationTag;
-use fvm_shared::crypto::signature::Signature;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::piece::PieceInfo;
 use fvm_shared::randomness::RANDOMNESS_LENGTH;
@@ -413,7 +412,7 @@ where
     // forwarded
     fn verify_signature(
         &mut self,
-        signature: &Signature,
+        signature: &[u8],
         signer: &Address,
         plaintext: &[u8],
     ) -> Result<bool> {

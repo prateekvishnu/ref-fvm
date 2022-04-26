@@ -19,9 +19,7 @@ pub fn verify_signature(
     signer: &Address,
     plaintext: &[u8],
 ) -> SyscallResult<bool> {
-    let signature = signature
-        .marshal_cbor()
-        .expect("failed to marshal signature");
+    let signature = signature.bytes();
     let signer = signer.to_bytes();
     unsafe {
         sys::crypto::verify_signature(

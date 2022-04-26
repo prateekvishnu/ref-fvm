@@ -18,6 +18,7 @@ use fvm_shared::commcid::{
     cid_to_data_commitment_v1, cid_to_replica_commitment_v1, data_commitment_v1_to_cid,
 };
 use fvm_shared::consensus::ConsensusFault;
+use fvm_shared::crypto::signature::{verify_signature, SignatureType};
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ErrorNumber;
 use fvm_shared::piece::{zero_piece_commitment, PaddedPieceSize};
@@ -459,19 +460,40 @@ where
 {
     fn verify_signature(
         &mut self,
-        signature: &Signature,
+        signature: &[u8],
         signer: &Address,
         plaintext: &[u8],
     ) -> Result<bool> {
-        self.call_manager.charge_gas(
-            self.call_manager
-                .price_list()
-                .on_verify_signature(signature.signature_type()),
-        )?;
+        // TODO: remove this after the nv16 upgrade.
+        //
+        // < nv16: charge gas for the key lookup after we charge for the signature
+        // verification.
+        //
+        // <= nv16: charge for gas for the key lookup first (because we need to know the type of
+        // signature we're verifying).
+        let legacy_gas_charging = self.network_version() < NetworkVersion::V16;
 
         // Resolve to key address before verifying signature.
-        let signing_addr = self.resolve_to_key_addr(signer, true)?;
-        Ok(signature.verify(plaintext, &signing_addr).is_ok())
+        let signing_addr = self.resolve_to_key_addr(signer, !legacy_gas_charging)?;
+
+        // Figure out the right signature type. An error here is fatal, because it means that
+        // `resolve_to_key_addr` failed.
+        let sig_type: SignatureType = signing_addr
+            .protocol()
+            .try_into()
+            .or_fatal()
+            .context("expected a key address")?;
+
+        self.call_manager
+            .charge_gas(self.call_manager.price_list().on_verify_signature(sig_type))?;
+
+        // If we're charging "legacy" gas, and we have done an actor lookup, charge now.
+        if legacy_gas_charging && signing_addr.protocol() != signer.protocol() {
+            self.call_manager
+                .charge_gas(self.call_manager.price_list().on_block_open_base())?;
+        }
+
+        Ok(verify_signature(plaintext, signature, &signing_addr).is_ok())
     }
 
     fn hash_blake2b(&mut self, data: &[u8]) -> Result<[u8; 32]> {

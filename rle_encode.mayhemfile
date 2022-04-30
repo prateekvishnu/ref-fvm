@@ -2,7 +2,7 @@
 project: ref-fvm
 
 # Target name (should be unique within the project)
-target: decode
+target: encode
 
 # Base image to run the binary in.
 # image: ghcr.io/prateekvishnu/ref-fvm:latest
@@ -12,9 +12,7 @@ cmds:
 
     # Command used to start the target, "@@" is the input file
     # (when "@@" is omitted Mayhem defaults to stdin inputs)
-    - cmd: /rle_decode
     - cmd: /rle_encode
-    - cmd: /rle_ops
 
  
 

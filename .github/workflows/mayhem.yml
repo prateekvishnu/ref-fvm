@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    name: '${{ matrix.os }} shared=${{ matrix.shared }} ${{ matrix.build_type }}'
+    name: ${{ matrix.os }} shared=${{ matrix.shared }} ${{ matrix.build_type }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -51,21 +51,21 @@ jobs:
         uses: ForAllSecure/mcode-action@v1
         with:
           mayhem-token: ${{ secrets.MAYHEM_TOKEN }}
-          args: --image ${{ steps.meta.outputs.tags }} --file ${{ env.DECODE_MAYHEMFILE}}
+          args: --image ${{ steps.meta.outputs.tags }} --file ${{ env.DECODE_MAYHEMFILE}} --duration 300
           sarif-output: sarif
 
       - name: Start analysis for encode
         uses: ForAllSecure/mcode-action@v1
         with:
           mayhem-token: ${{ secrets.MAYHEM_TOKEN }}
-          args: --image ${{ steps.meta.outputs.tags }} --file ${{ env.ENCODE_MAYHEMFILE}}
+          args: --image ${{ steps.meta.outputs.tags }} --file ${{ env.ENCODE_MAYHEMFILE}} --duration 300
           sarif-output: sarif
 
       - name: Start analysis for ops
         uses: ForAllSecure/mcode-action@v1
         with:
           mayhem-token: ${{ secrets.MAYHEM_TOKEN }}
-          args: --image ${{ steps.meta.outputs.tags }} --file ${{ env.OPS_MAYHEMFILE}}
+          args: --image ${{ steps.meta.outputs.tags }} --file ${{ env.OPS_MAYHEMFILE}} --duration 300
           sarif-output: sarif
 
       - name: Upload SARIF file(s)

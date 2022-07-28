@@ -1,11 +1,10 @@
-use fvm_ipld_encoding::RawBytes;
 use fvm_shared::address::Address;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
 use fvm_shared::{ActorID, MethodNum};
 
 use crate::gas::{GasCharge, GasTracker, PriceList};
-use crate::kernel::Result;
+use crate::kernel::{self, Result};
 use crate::machine::{Machine, MachineContext};
 use crate::state_tree::StateTree;
 use crate::Kernel;
@@ -52,7 +51,7 @@ pub trait CallManager: 'static {
         from: ActorID,
         to: Address,
         method: MethodNum,
-        params: &RawBytes,
+        params: Option<kernel::Block>,
         value: &TokenAmount,
     ) -> Result<InvocationResult>;
 
@@ -83,6 +82,9 @@ pub trait CallManager: 'static {
 
     /// Gets and increment the call-stack actor creation index.
     fn next_actor_idx(&mut self) -> u64;
+
+    /// Gets the total invocations done on this call stack.
+    fn invocation_count(&self) -> u64;
 
     /// Returns the current price list.
     fn price_list(&self) -> &PriceList {
@@ -116,7 +118,7 @@ pub trait CallManager: 'static {
 
     /// Charge gas.
     fn charge_gas(&mut self, charge: GasCharge) -> Result<()> {
-        self.gas_tracker_mut().charge_gas(charge)?;
+        self.gas_tracker_mut().apply_charge(charge)?;
         Ok(())
     }
 }
@@ -125,7 +127,7 @@ pub trait CallManager: 'static {
 #[derive(Clone, Debug)]
 pub enum InvocationResult {
     /// Indicates that the actor successfully returned. The value may be empty.
-    Return(RawBytes),
+    Return(Option<kernel::Block>),
     /// Indicates that the actor aborted with the given exit code.
     Failure(ExitCode),
 }

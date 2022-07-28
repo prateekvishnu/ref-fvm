@@ -31,10 +31,25 @@ mod inner {
             sys::debug::log(msg.as_ptr(), msg.len() as u32).unwrap();
         }
     }
-    /// Initialize logging if debuggig is enabled.
+    /// Initialize logging if debugging is enabled.
     pub fn init_logging() {
         if enabled() {
             log::set_logger(&Logger).expect("failed to enable logging");
+        }
+    }
+
+    /// Saves an artifact to the host env. New artifacts with the same name will overwrite old ones
+    pub fn store_artifact(name: impl AsRef<str>, data: impl AsRef<[u8]>) {
+        let name = name.as_ref();
+        let data = data.as_ref();
+        unsafe {
+            sys::debug::store_artifact(
+                name.as_ptr(),
+                name.len() as u32,
+                data.as_ptr(),
+                data.len() as u32,
+            )
+            .unwrap();
         }
     }
 
